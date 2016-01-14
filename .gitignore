@@ -1,3 +1,9 @@
+# Do not track config file with username/password
+auth_config.py
+
+# Don't track comments already processed file
+comments_already_processed.txt
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

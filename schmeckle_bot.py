@@ -3,6 +3,12 @@ import praw
 import re
 import locale
 import collections
+import os
+
+import auth_config
+
+#########################################################
+# Setup
 
 # For converting from string numbers with english-based commas to floats
 locale.setlocale(locale.LC_ALL, 'eng_USA') # Windows
@@ -11,11 +17,16 @@ locale.setlocale(locale.LC_ALL, 'eng_USA') # Windows
 # Set up praw
 schmeckle_bot_name = "SchmeckleBot"
 user_agent = schmeckle_bot_name + " converts Schmeckles to USD in rickandmorty subreddit. See https://github.com/Elucidation/schmeckle_bot"
+
+# Login
 r = praw.Reddit(user_agent=user_agent)
+
+# Login old-style due to Reddit politics
+r.login(auth_config.USERNAME, auth_config.PASSWORD, disable_warning=True)
 
 # Get accessor to comments
 subreddit = r.get_subreddit('rickandmorty')
-comments = subreddit.get_comments(limit=100)
+comments = subreddit.get_comments(limit=None)
 
 # Look for '<number> schmeckle' ignore case (schmeckles accepted implicitly)
 # Works for positive negative floats, but fails softly on EXP
@@ -27,8 +38,11 @@ quote_remove = re.compile("^> .*\n", re.MULTILINE)
 # How long a quote in either direction can be before truncating
 max_sentence_buffer = 100
 
-# Generate Quote for comment
+#########################################################
+# Helper Functions
+
 def getQuote(body):
+  """Generate Quote for comment"""
   lines = []
   body = quote_remove.sub('', body) # Remove quoted lines
 
@@ -55,13 +69,13 @@ def getQuote(body):
   quote = ["> " + p.sub(r'**\1**', line) + "\n" for line in lines]
   return quote
 
-def schmeckle2USD(schmeckle):
-  # https://www.reddit.com/r/IAmA/comments/202owt/we_are_dan_harmon_and_justin_roiland_creators_of/cfzfv79
-  # 1 Schmeckle = $148 USD
+def schmeckle2usd(schmeckle):
+  """1 Schmeckle = $148 USD
+  https://www.reddit.com/r/IAmA/comments/202owt/we_are_dan_harmon_and_justin_roiland_creators_of/cfzfv79"""
   return schmeckle * 148.0
 
-# Calculate schmeckle to USD responses
 def getConversion(body):
+  """Calculate schmeckle to USD responses"""
   values = []
   msg_template = u"* {:,.2f} Schmeckles → **${:,.2f} USD**\n"
   pairs = p.findall(body)
@@ -70,11 +84,11 @@ def getConversion(body):
       # '<number> schmeckle' -> match, float(<number>)
       values.append(locale.atof(match.split()[0]))
 
-  response = [msg_template.format(schmeckle, schmeckle2USD(schmeckle)) for schmeckle in values]
+  response = [msg_template.format(schmeckle, schmeckle2usd(schmeckle)) for schmeckle in values]
   return [response, values]
 
-# Get response packet to use for replying to message
 def getResponse(body):
+  """Get response packet to use for replying to message"""
   # If there is a schmeckle value in body
   if p.search(body):
     quote = getQuote(body)
@@ -89,21 +103,50 @@ def getResponse(body):
 
   return None
 
-# Track commend ids that have already been processed successfully
-already_processed = set()
+# Filename containing list of comment ids that have already been processed, updated at end of program
+processed_filename = "comments_already_processed.txt"
+def loadProcessed():
+  if not os.path.isfile(processed_filename):
+    print("Starting new processed file")
+    return set()
+  else:
+    print("Loading existing processed file...")
+    with open(processed_filename,'r') as f:
+      return set(f.readlines())
 
+def saveProcessed(already_processed):
+  with open(processed_filename,'w') as f:
+    for comment_id in already_processed:
+      f.write("%s\n" % comment_id)
+
+#########################################################
+# Main Script
+# Track commend ids that have already been processed successfully
+
+# Load list of already processed comment ids
+already_processed = loadProcessed()
+print("Starting with already processed", already_processed)
+
+# Will hold response data
 data = []
-for comment in comments:
-  # Ignore self comments or comments that have been processed already
-  if comment.author.name == schmeckle_bot_name or comment.id in already_processed:
-    continue
-  
-  # If there is a schmeckle value in body
-  response = getResponse(comment.body)
-  if response:
-    data.append([comment, response])
-    # Keep track of comments replied to
-    already_processed.add(comment.id)
+
+try:
+  # Read in comments from accessor and process them  
+  for comment in comments:
+    # Ignore self comments or comments that have been processed already
+    if comment.author.name == schmeckle_bot_name or comment.id in already_processed:
+      continue
+    
+    # If there is a schmeckle value in body
+    response = getResponse(comment.body)
+    if response:
+      data.append([comment, response])
+      # Keep track of comments replied to
+      already_processed.add(comment.id)
+except KeyboardInterrupt:
+  print("Exiting...")
+finally:
+  saveProcessed(already_processed)
 
 print(already_processed)
 
