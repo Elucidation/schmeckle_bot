@@ -16,7 +16,8 @@ import auth_config
 
 # For converting from string numbers with english-based commas to floats
 locale.setlocale(locale.LC_ALL, 'eng_USA') # Windows
-# locale.setlocale(locale.LC_ALL, 'en_US') # Linux
+# locale.setlocale(locale.LC_ALL, 'en_US') # Linux (Unconfirmed)
+# locale.setlocale(locale.LC_ALL, 'en_GB.utf8') # Linux (Raspberry Pi 2)
 
 # Set up praw
 schmeckle_bot_name = "SchmeckleBot"
