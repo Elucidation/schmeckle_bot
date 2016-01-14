@@ -11,7 +11,9 @@ from datetime import datetime
 from praw.helpers import comment_stream
 import requests
 import socket
-#import IPython
+
+import requests
+import socket
 
 import auth_config
 
@@ -20,7 +22,7 @@ import auth_config
 
 # For converting from string numbers with english-based commas to floats
 #locale.setlocale(locale.LC_ALL, 'eng_USA') # Windows
-locale.setlocale(locale.LC_ALL, 'en_GB.utf8') # Linux
+locale.setlocale(locale.LC_ALL, 'en_GB.utf8') # Linux (Raspberry Pi 2)
 
 # Set up praw
 schmeckle_bot_name = "SchmeckleBot"
