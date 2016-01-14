@@ -7,6 +7,7 @@ import collections
 import os
 import time
 from datetime import datetime
+from praw.helpers import comment_stream
 
 import auth_config
 
@@ -29,7 +30,7 @@ r.login(auth_config.USERNAME, auth_config.PASSWORD, disable_warning=True)
 
 # Get accessor to comments
 subreddit = r.get_subreddit('rickandmorty')
-comments = subreddit.get_comments(limit=None)
+#comments = subreddit.get_comments(limit=None) # Using comment_stream instead for continuous yield
 
 # Look for '<number> schmeckle' ignore case (schmeckles accepted implicitly)
 # Works for positive negative floats, but fails softly on EXP
@@ -138,33 +139,29 @@ def updateCommentsWritten(comment, response):
 already_processed = loadProcessed()
 print("%s - Starting with already processed: %s" % (datetime.now(), already_processed))
 
-# Will hold response data
-data = []
-
-currently_processed = set()
-
+last = time.time()
+count = 0
+count_actual = 0
 try:
   # Read in comments from accessor and process them  
-  for comment in comments:
+  for comment in comment_stream(r, subreddit, limit=100):
+    if ((time.time() - last) > 30):
+      print("\t%s - %d comments read, %d schmeckleified comments so far..." % (datetime.now(), count, count_actual))
+      last = time.time()
+    
+    count += 1
     # Ignore self comments or comments that have been processed already
     if comment.author.name == schmeckle_bot_name or comment.id in already_processed:
+      print("%s - Skipping self/previous: %s" % (datetime.now(), comment.id))
       continue
     
     # If there is a schmeckle value in body
     response = getResponse(comment.body)
-    if response:
-      data.append([comment, response])
-      # Keep track of comments replied to
-      # currently_processed.add(comment.id)
-except KeyboardInterrupt:
-  print("%s - Exiting..." % datetime.now())
-
-print("%s - Processed %d comments, replying now" % (datetime.now(), len(data)))
-print("Comments to reply to: ",[x[0].id for x in data])
-
-try:
-  # For each comment
-  for comment,response in data:
+    if not response:
+      # Not a schmeckle convertable comment, continue
+      continue
+    
+    count_actual += 1
     # response = [quote_text, conversion_text, value, full_response_text]
     msg = response[3]
     while True:
@@ -186,7 +183,9 @@ try:
           sleep_time -= 60
           print("\t%s - %s seconds to go..." % (datetime.now(), sleep_time))
         time.sleep(sleep_time)
-          
+    
+    # Save after each comment
+    saveProcessed(already_processed)
     # 10 minutes per comment max speed
     sleep_time = 600
     print("\t%s - %s seconds to go..." % (datetime.now(), sleep_time))
