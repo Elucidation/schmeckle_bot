@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Find comments with schmeckles in it and comment with value converted to USD
 import praw
 import re
@@ -112,7 +113,7 @@ def loadProcessed():
   else:
     print("Loading existing processed file...")
     with open(processed_filename,'r') as f:
-      return set(f.readlines())
+      return set([x.strip() for x in f.readlines()])
 
 def saveProcessed(already_processed):
   with open(processed_filename,'w') as f:
