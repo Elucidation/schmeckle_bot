@@ -12,9 +12,6 @@ from praw.helpers import comment_stream
 import requests
 import socket
 
-import requests
-import socket
-
 import auth_config
 
 #########################################################
@@ -220,7 +217,6 @@ except KeyboardInterrupt:
 finally:
   saveProcessed(already_processed)
   print("%s - Total Processed:\n%s" % (datetime.now(),already_processed))
-  #IPython.embed()
 
 # TODO: do something with data, reply to comments
 # TODO: handle print() unicode error at some point
