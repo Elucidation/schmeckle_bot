@@ -5,6 +5,7 @@ import re
 import locale
 import collections
 import os
+import time
 
 import auth_config
 
@@ -99,7 +100,7 @@ def getResponse(body):
     msg = "\n\n".join(quote)
     msg += "\n" + "\n".join(conversion)
     msg += "\n---\n"
-    msg += "\n[^(1 Schmeckle = $148 USD)](https://www.reddit.com/r/IAmA/comments/202owt/we_are_dan_harmon_and_justin_roiland_creators_of/cfzfv79)^( | price match not guaranteed |) [^(`what is my purpose`)](https://github.com/Elucidation/schmeckle_bot 'convert Schmeckles to USD')"
+    msg += "\n[^(1 Schmeckle = $148 USD)](https://www.reddit.com/r/IAmA/comments/202owt/we_are_dan_harmon_and_justin_roiland_creators_of/cfzfv79)^( | price not guaranteed |) [^(`what is my purpose`)](https://github.com/Elucidation/schmeckle_bot 'convert Schmeckles to USD')"
     return [quote, conversion, values, msg]
 
   return None
@@ -131,6 +132,8 @@ print("Starting with already processed", already_processed)
 # Will hold response data
 data = []
 
+currently_processed = set()
+
 try:
   # Read in comments from accessor and process them  
   for comment in comments:
@@ -143,13 +146,40 @@ try:
     if response:
       data.append([comment, response])
       # Keep track of comments replied to
-      already_processed.add(comment.id)
+      # currently_processed.add(comment.id)
+except KeyboardInterrupt:
+  print("Exiting...")
+
+print("Processed %d comments, replying now" % len(data))
+print("Comments to reply to: ",[x[0].id for x in data])
+
+try:
+  # For each comment
+  for comment,response in data:
+    # response = [quote_text, conversion_text, value, full_response_text]
+    msg = response[3]
+    while True:
+      try:
+        print("\nReplying to %s..." % comment.id)
+        comment.reply(msg)
+        already_processed.add(comment.id) # Remove from already_processed as we didn't get it
+        print("> Successful reply to %s" % comment.id)
+        break
+      except praw.errors.AlreadySubmitted as e:
+        print("> Already submitted skipping...")
+        break
+      except praw.errors.RateLimitExceeded as e:
+        print("> Rate Limit Error for replying to {}, sleeping for {}, then retrying".format(comment.id, e.sleep_time))
+        time.sleep(e.sleep_time)
+    time.sleep(600) # 10 minutes per comment max speed
+except Exception as e:
+  print("Unknown Error:",e)
 except KeyboardInterrupt:
   print("Exiting...")
 finally:
+  print("Saving processed...")
   saveProcessed(already_processed)
-
-print(already_processed)
+  print("Done. Total Processed:\n",already_processed)
 
 # TODO: do something with data, reply to comments
 # TODO: handle print() unicode error at some point
