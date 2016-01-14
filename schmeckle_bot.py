@@ -6,6 +6,7 @@ import locale
 import collections
 import os
 import time
+from datetime import datetime
 
 import auth_config
 
@@ -107,9 +108,10 @@ def getResponse(body):
 
 # Filename containing list of comment ids that have already been processed, updated at end of program
 processed_filename = "comments_already_processed.txt"
+replies_filename = "comments_reply_list.txt"
 def loadProcessed():
   if not os.path.isfile(processed_filename):
-    print("Starting new processed file")
+    print("%s - Starting new processed file" % datetime.now())
     return set()
   else:
     print("Loading existing processed file...")
@@ -120,6 +122,13 @@ def saveProcessed(already_processed):
   with open(processed_filename,'w') as f:
     for comment_id in already_processed:
       f.write("%s\n" % comment_id)
+  print("%s - Saved processed ids to file" % datetime.now())
+
+def updateCommentsWritten(comment, response):
+  quote, conversions, values, msg = response
+  with open(replies_filename,'a', encoding='utf8') as f:
+    # ignore unicode arrow, remove footer and strip extra newlines
+    f.write("# Comment ID `{}` - {}\n{}\n---\n".format(comment.id, datetime.now(), msg.split('---')[0].strip()))
 
 #########################################################
 # Main Script
@@ -127,7 +136,7 @@ def saveProcessed(already_processed):
 
 # Load list of already processed comment ids
 already_processed = loadProcessed()
-print("Starting with already processed", already_processed)
+print("%s - Starting with already processed: %s" % (datetime.now(), already_processed))
 
 # Will hold response data
 data = []
@@ -148,9 +157,9 @@ try:
       # Keep track of comments replied to
       # currently_processed.add(comment.id)
 except KeyboardInterrupt:
-  print("Exiting...")
+  print("%s - Exiting..." % datetime.now())
 
-print("Processed %d comments, replying now" % len(data))
+print("%s - Processed %d comments, replying now" % (datetime.now(), len(data)))
 print("Comments to reply to: ",[x[0].id for x in data])
 
 try:
@@ -160,26 +169,39 @@ try:
     msg = response[3]
     while True:
       try:
-        print("\nReplying to %s..." % comment.id)
+        print("\n%s - Replying to %s..." % (datetime.now(), comment.id))
         comment.reply(msg)
         already_processed.add(comment.id) # Remove from already_processed as we didn't get it
-        print("> Successful reply to %s" % comment.id)
+        print("> %s - Successful reply to %s" % (datetime.now(), comment.id))
+        updateCommentsWritten(comment, response)
         break
       except praw.errors.AlreadySubmitted as e:
-        print("> Already submitted skipping...")
+        print("> %s - Already submitted skipping..." % datetime.now())
         break
       except praw.errors.RateLimitExceeded as e:
-        print("> Rate Limit Error for replying to {}, sleeping for {}, then retrying".format(comment.id, e.sleep_time))
-        time.sleep(e.sleep_time)
-    time.sleep(600) # 10 minutes per comment max speed
+        print("> %s - Rate Limit Error for replying to {}, sleeping for {}, then retrying".format(datetime.now(), comment.id, e.sleep_time))
+        sleep_time = e.sleep_time
+        while sleep_time > 60:
+          time.sleep(60) # sleep in increments of 1 minute
+          sleep_time -= 60
+          print("\t%s - %s seconds to go..." % (datetime.now(), sleep_time))
+        time.sleep(sleep_time)
+          
+    # 10 minutes per comment max speed
+    sleep_time = 600
+    while sleep_time > 60:
+      time.sleep(60) # sleep in increments of 1 minute
+      sleep_time -= 60
+      print("\t%s - %s seconds to go..." % (datetime.now(), sleep_time))
+    time.sleep(sleep_time)
+
 except Exception as e:
   print("Unknown Error:",e)
 except KeyboardInterrupt:
   print("Exiting...")
 finally:
-  print("Saving processed...")
   saveProcessed(already_processed)
-  print("Done. Total Processed:\n",already_processed)
+  print("%s - Total Processed:\n%s" % (datetime.now(),already_processed))
 
 # TODO: do something with data, reply to comments
 # TODO: handle print() unicode error at some point
