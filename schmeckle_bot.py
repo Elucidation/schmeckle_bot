@@ -179,7 +179,7 @@ try:
         print("> %s - Already submitted skipping..." % datetime.now())
         break
       except praw.errors.RateLimitExceeded as e:
-        print("> %s - Rate Limit Error for replying to {}, sleeping for {}, then retrying".format(datetime.now(), comment.id, e.sleep_time))
+        print("> %s - Rate Limit Error for replying to {}, sleeping for {} before retrying...".format(datetime.now(), comment.id, e.sleep_time))
         sleep_time = e.sleep_time
         while sleep_time > 60:
           time.sleep(60) # sleep in increments of 1 minute
@@ -189,6 +189,7 @@ try:
           
     # 10 minutes per comment max speed
     sleep_time = 600
+    print("\t%s - %s seconds to go..." % (datetime.now(), sleep_time))
     while sleep_time > 60:
       time.sleep(60) # sleep in increments of 1 minute
       sleep_time -= 60
@@ -207,3 +208,4 @@ finally:
 # TODO: handle print() unicode error at some point
 # TODO: track comments that have been replied to in a deque cache to avoid repeats
 # TODO: save comments replied to in txt file, load on start
+# TODO: Consider markdown tables
