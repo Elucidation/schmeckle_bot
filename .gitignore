@@ -5,6 +5,9 @@ auth_config.py
 comments_already_processed.txt
 comments_reply_list.txt
 
+# vi swp files
+*.swp
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 # Find comments with schmeckles in it and comment with value converted to USD
 import praw
@@ -8,6 +9,9 @@ import os
 import time
 from datetime import datetime
 from praw.helpers import comment_stream
+import requests
+import socket
+#import IPython
 
 import auth_config
 
@@ -15,8 +19,8 @@ import auth_config
 # Setup
 
 # For converting from string numbers with english-based commas to floats
-locale.setlocale(locale.LC_ALL, 'eng_USA') # Windows
-# locale.setlocale(locale.LC_ALL, 'en_US') # Linux
+#locale.setlocale(locale.LC_ALL, 'eng_USA') # Windows
+locale.setlocale(locale.LC_ALL, 'en_GB.utf8') # Linux
 
 # Set up praw
 schmeckle_bot_name = "SchmeckleBot"
@@ -91,10 +95,15 @@ def getConversion(body):
   response = [msg_template.format(schmeckle, schmeckle2usd(schmeckle)) for schmeckle in values]
   return [response, values]
 
+
+question_indicators = ["how","what","value","?", "!"]
 def getResponse(body):
   """Get response packet to use for replying to message"""
   # If there is a schmeckle value in body
   if p.search(body):
+    print("Has schmeckles, checking questions:\n%s"%body)
+    if not any([q in body.lower() for q in question_indicators]):
+      return None
     quote = getQuote(body)
     conversion, values = getConversion(body)
 
@@ -127,9 +136,9 @@ def saveProcessed(already_processed):
 
 def updateCommentsWritten(comment, response):
   quote, conversions, values, msg = response
-  with open(replies_filename,'a', encoding='utf8') as f:
+  with open(replies_filename,'a') as f:
     # ignore unicode arrow, remove footer and strip extra newlines
-    f.write("# Comment ID `{}` - {}\n{}\n---\n".format(comment.id, datetime.now(), msg.split('---')[0].strip()))
+    f.write("# Comment ID `{}` - {}\n{}\n---\n".format(comment.id, datetime.now(), msg.split('---')[0].encode('ascii','ignore').strip()))
 
 #########################################################
 # Main Script
@@ -144,9 +153,11 @@ count = 0
 count_actual = 0
 try:
   # Read in comments from accessor and process them  
-  for comment in comment_stream(r, subreddit, limit=100):
+  comments = comment_stream(r, subreddit, limit=1000)
+  for comment in comments:
     if ((time.time() - last) > 30):
       print("\t%s - %d comments read, %d schmeckleified comments so far..." % (datetime.now(), count, count_actual))
+      print("Reading %s: %s" % (comment.id, comment))
       last = time.time()
     
     count += 1
@@ -183,6 +194,11 @@ try:
           sleep_time -= 60
           print("\t%s - %s seconds to go..." % (datetime.now(), sleep_time))
         time.sleep(sleep_time)
+      except (socket.error, requests.exceptions.ReadTimeout, requests.packages.urllib3.exceptions.ReadTimeoutError, requests.exceptions.ConnectionError) as e:
+        print("> %s - Connection error, resetting accessor, waiting 30 and trying again: %s" % (datetime.now(), e))
+        saveProcessed(already_processed)
+        comments = comment_stream(r, subreddit, limit=100)
+        time.sleep(30)
     
     # Save after each comment
     saveProcessed(already_processed)
@@ -202,9 +218,11 @@ except KeyboardInterrupt:
 finally:
   saveProcessed(already_processed)
   print("%s - Total Processed:\n%s" % (datetime.now(),already_processed))
+  #IPython.embed()
 
 # TODO: do something with data, reply to comments
 # TODO: handle print() unicode error at some point
 # TODO: track comments that have been replied to in a deque cache to avoid repeats
 # TODO: save comments replied to in txt file, load on start
 # TODO: Consider markdown tables
+
