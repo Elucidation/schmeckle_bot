@@ -45,6 +45,13 @@ quote_remove = re.compile("^> .*\n", re.MULTILINE)
 # How long a quote in either direction can be before truncating
 max_sentence_buffer = 100
 
+# How many comments to read initially in stream
+comment_stream_limit = 100
+
+# How many submissions to read from now initially
+submission_read_limit = 100
+
+
 #########################################################
 # Helper Functions
 
@@ -96,11 +103,11 @@ def getConversion(body):
 
 
 question_indicators = ["how","what","value","?", "!"]
-def getResponse(body):
+def getResponse(body, skipPartial=True):
   """Get response packet to use for replying to message"""
   # If there is a schmeckle value in body
   if p.search(body):
-    if not any([q in body.lower() for q in question_indicators]):
+    if skipPartial and not any([q in body.lower() for q in question_indicators]):
       print("\n------\nPartial Match Skipped:\n%s\n------\n"%body)
       return None
     quote = getQuote(body)
@@ -133,11 +140,57 @@ def saveProcessed(already_processed):
       f.write("%s\n" % comment_id)
   print("%s - Saved processed ids to file" % datetime.now())
 
-def updateCommentsWritten(comment, response):
+def updateProcessed(comment_or_submission, response):
+  """Update Comments or Submission in text file containing all comments/submissions made"""
   quote, conversions, values, msg = response
+  name = "Comment"
+  if type(comment_or_submission) == praw.objects.Submission:
+      name = "Submission"
   with open(replies_filename,'a') as f:
     # ignore unicode arrow, remove footer and strip extra newlines
-    f.write("# Comment ID `{}` - {}\n{}\n---\n".format(comment.id, datetime.now(), msg.split('---')[0].encode('ascii','ignore').strip()))
+    f.write("# {} ID `{}` - {}\n{}\n---\n".format(name, comment_or_submission.id, datetime.now(), msg.split('---')[0].encode('ascii','ignore').strip()))
+
+def checkSubmissions(limit=submission_read_limit):
+  """Check new submissions in subreddit and add comments if they warrant a response"""
+  submissions = subreddit.get_hot(limit=limit)
+  internal_count = 0
+
+  print("\n---\n%s - Checking latest submissions..." % (datetime.now()))
+  for submission in submissions:
+    if submission.id in already_processed:
+      print("%s - Skipping previously processed: %s" % (datetime.now(), submission.id))
+      continue
+    
+    response = getResponse(submission.title, skipPartial=False)
+    #print("\t Read(%s): %s" % (submission.id, submission))
+    
+    # If valid submission
+    if response:
+      internal_count += 1
+      msg = response[3] # response = [quote_text, conversion_text, value, full_response_text]
+      while True:
+        try:
+          print("\n%s - Commenting on %s..." % (datetime.now(), submission.id))
+          print("\n\t%s\n\n" % (submission))
+          submission.add_comment(msg)
+          already_processed.add(submission.id) # Remove from already_processed as we didn't get it
+          print("> %s - Successful added comment to %s" % (datetime.now(), submission.id))
+          updateProcessed(submission, response)
+          break
+        except praw.errors.AlreadySubmitted as e:
+          print("> %s - Already submitted skipping..." % datetime.now())
+          break
+        except praw.errors.RateLimitExceeded as e:
+          print("> %s - Rate Limit Error for replying to {}, sleeping for {} before retrying...".format(datetime.now(), submission.id, e.sleep_time))
+          sleep_time = e.sleep_time
+          while sleep_time > 60:
+            time.sleep(60) # sleep in increments of 1 minute
+            sleep_time -= 60
+            print("\t%s - %s seconds to go..." % (datetime.now(), sleep_time))
+          time.sleep(sleep_time)
+
+  # Number of comments sent
+  return internal_count
 
 #########################################################
 # Main Script
@@ -152,16 +205,22 @@ count = 0
 count_actual = 0
 running = True
 while running:
-  try:
+  try:    
     # Read in comments from accessor and process them
     print ("\n\t---\n\t%s - Generating fresh comment stream\n\t---\n\n" % datetime.now())
-    comments = comment_stream(r, subreddit, limit=1000)
+    comments = comment_stream(r, subreddit, limit=comment_stream_limit)
     for comment in comments:
       if ((time.time() - last) > 120):
         print("\n\t---\n\t%s - %d processed comments, %d read\n" % (datetime.now(), count_actual, count))
+        # Read in submissions and process
+        # Check submissions
+        print ("\n\t---\n\t%s - Processing hot submissions \n\t---\n\n" % datetime.now())
+        count_actual += checkSubmissions()
+        print ("\n\t---\n")
+
         last = time.time()
       
-      if (count > 1000):
+      if (count > comment_stream_limit):
         print("#%d Read(%s): %s" % (count, comment.id, comment))
 
       count += 1
@@ -188,7 +247,7 @@ while running:
           comment.reply(msg)
           already_processed.add(comment.id) # Remove from already_processed as we didn't get it
           print("> %s - Successful reply to %s" % (datetime.now(), comment.id))
-          updateCommentsWritten(comment, response)
+          updateProcessed(comment, response)
           break
         except praw.errors.AlreadySubmitted as e:
           print("> %s - Already submitted skipping..." % datetime.now())
@@ -204,14 +263,15 @@ while running:
       
       # Save after each comment
       saveProcessed(already_processed)
-      # 10 minutes per comment max speed
-      sleep_time = 600
+      # 5 minutes per comment max speed, add on time it takes to check submissions
+      sleep_time = 300
       print("\t%s - %s seconds to go..." % (datetime.now(), sleep_time))
       while sleep_time > 60:
         time.sleep(60) # sleep in increments of 1 minute
         sleep_time -= 60
         print("\t%s - %s seconds to go..." % (datetime.now(), sleep_time))
       time.sleep(sleep_time)
+
   except (socket.error, requests.exceptions.ReadTimeout, requests.packages.urllib3.exceptions.ReadTimeoutError, requests.exceptions.ConnectionError) as e:
     print("> %s - Connection error, resetting accessor, waiting 30 and trying again: %s" % (datetime.now(), e))
     saveProcessed(already_processed)
