@@ -103,9 +103,9 @@ def getConversion(body):
   for schmeckle in values:
     usd = schmeckle2usd(schmeckle)
     if schmeckle.is_integer():
-      response.append(msg_template_f.format(schmeckle, usd))
-    else:
       response.append(msg_template_i.format(schmeckle, usd))
+    else:
+      response.append(msg_template_f.format(schmeckle, usd))
   
   return [response, values]
 
