@@ -100,8 +100,8 @@ def getResponse(body):
   """Get response packet to use for replying to message"""
   # If there is a schmeckle value in body
   if p.search(body):
-    print("Has schmeckles, checking questions:\n%s"%body)
     if not any([q in body.lower() for q in question_indicators]):
+      print("\n------\nPartial Match Skipped:\n%s\n------\n"%body)
       return None
     quote = getQuote(body)
     conversion, values = getConversion(body)
@@ -145,78 +145,88 @@ def updateCommentsWritten(comment, response):
 
 # Load list of already processed comment ids
 already_processed = loadProcessed()
-print("%s - Starting with already processed: %s" % (datetime.now(), already_processed))
+print("%s - Starting with already processed: %s\n==========\n\n" % (datetime.now(), already_processed))
 
 last = time.time()
 count = 0
 count_actual = 0
-try:
-  # Read in comments from accessor and process them  
-  comments = comment_stream(r, subreddit, limit=1000)
-  for comment in comments:
-    if ((time.time() - last) > 30):
-      print("\t%s - %d comments read, %d schmeckleified comments so far..." % (datetime.now(), count, count_actual))
-      print("Reading %s: %s" % (comment.id, comment))
-      last = time.time()
-    
-    count += 1
-    # Ignore self comments or comments that have been processed already
-    if comment.author.name == schmeckle_bot_name or comment.id in already_processed:
-      print("%s - Skipping self/previous: %s" % (datetime.now(), comment.id))
-      continue
-    
-    # If there is a schmeckle value in body
-    response = getResponse(comment.body)
-    if not response:
-      # Not a schmeckle convertable comment, continue
-      continue
-    
-    count_actual += 1
-    # response = [quote_text, conversion_text, value, full_response_text]
-    msg = response[3]
-    while True:
-      try:
-        print("\n%s - Replying to %s..." % (datetime.now(), comment.id))
-        comment.reply(msg)
-        already_processed.add(comment.id) # Remove from already_processed as we didn't get it
-        print("> %s - Successful reply to %s" % (datetime.now(), comment.id))
-        updateCommentsWritten(comment, response)
-        break
-      except praw.errors.AlreadySubmitted as e:
-        print("> %s - Already submitted skipping..." % datetime.now())
-        break
-      except praw.errors.RateLimitExceeded as e:
-        print("> %s - Rate Limit Error for replying to {}, sleeping for {} before retrying...".format(datetime.now(), comment.id, e.sleep_time))
-        sleep_time = e.sleep_time
-        while sleep_time > 60:
-          time.sleep(60) # sleep in increments of 1 minute
-          sleep_time -= 60
-          print("\t%s - %s seconds to go..." % (datetime.now(), sleep_time))
-        time.sleep(sleep_time)
-      except (socket.error, requests.exceptions.ReadTimeout, requests.packages.urllib3.exceptions.ReadTimeoutError, requests.exceptions.ConnectionError) as e:
-        print("> %s - Connection error, resetting accessor, waiting 30 and trying again: %s" % (datetime.now(), e))
-        saveProcessed(already_processed)
-        comments = comment_stream(r, subreddit, limit=100)
-        time.sleep(30)
-    
-    # Save after each comment
-    saveProcessed(already_processed)
-    # 10 minutes per comment max speed
-    sleep_time = 600
-    print("\t%s - %s seconds to go..." % (datetime.now(), sleep_time))
-    while sleep_time > 60:
-      time.sleep(60) # sleep in increments of 1 minute
-      sleep_time -= 60
-      print("\t%s - %s seconds to go..." % (datetime.now(), sleep_time))
-    time.sleep(sleep_time)
+running = True
+while running:
+  try:
+    # Read in comments from accessor and process them
+    print ("\n\t---\n\t%s - Generating fresh comment stream\n\t---\n\n" % datetime.now())
+    comments = comment_stream(r, subreddit, limit=1000)
+    for comment in comments:
+      if ((time.time() - last) > 120):
+        print("\n\t---\n\t%s - %d processed comments, %d read\n" % (datetime.now(), count_actual, count))
+        last = time.time()
+      
+      if (count > 1000):
+        print("#%d Read(%s): %s" % (count, comment.id, comment))
 
-except Exception as e:
-  print("Unknown Error:",e)
-except KeyboardInterrupt:
-  print("Exiting...")
-finally:
-  saveProcessed(already_processed)
-  print("%s - Total Processed:\n%s" % (datetime.now(),already_processed))
+      count += 1
+      # Ignore self comments or comments that have been processed already
+      if comment.author.name == schmeckle_bot_name:
+        print("%s - Skipping self comment: %s" % (datetime.now(), comment.id))
+        continue
+      elif comment.id in already_processed:
+        print("%s - Skipping previously processed: %s" % (datetime.now(), comment.id))
+        continue
+      
+      # If there is a schmeckle value in body
+      response = getResponse(comment.body)
+      if not response:
+        # Not a schmeckle convertable comment, continue
+        continue
+      
+      count_actual += 1
+      # response = [quote_text, conversion_text, value, full_response_text]
+      msg = response[3]
+      while True:
+        try:
+          print("\n%s - Replying to %s..." % (datetime.now(), comment.id))
+          comment.reply(msg)
+          already_processed.add(comment.id) # Remove from already_processed as we didn't get it
+          print("> %s - Successful reply to %s" % (datetime.now(), comment.id))
+          updateCommentsWritten(comment, response)
+          break
+        except praw.errors.AlreadySubmitted as e:
+          print("> %s - Already submitted skipping..." % datetime.now())
+          break
+        except praw.errors.RateLimitExceeded as e:
+          print("> %s - Rate Limit Error for replying to {}, sleeping for {} before retrying...".format(datetime.now(), comment.id, e.sleep_time))
+          sleep_time = e.sleep_time
+          while sleep_time > 60:
+            time.sleep(60) # sleep in increments of 1 minute
+            sleep_time -= 60
+            print("\t%s - %s seconds to go..." % (datetime.now(), sleep_time))
+          time.sleep(sleep_time)
+      
+      # Save after each comment
+      saveProcessed(already_processed)
+      # 10 minutes per comment max speed
+      sleep_time = 600
+      print("\t%s - %s seconds to go..." % (datetime.now(), sleep_time))
+      while sleep_time > 60:
+        time.sleep(60) # sleep in increments of 1 minute
+        sleep_time -= 60
+        print("\t%s - %s seconds to go..." % (datetime.now(), sleep_time))
+      time.sleep(sleep_time)
+  except (socket.error, requests.exceptions.ReadTimeout, requests.packages.urllib3.exceptions.ReadTimeoutError, requests.exceptions.ConnectionError) as e:
+    print("> %s - Connection error, resetting accessor, waiting 30 and trying again: %s" % (datetime.now(), e))
+    saveProcessed(already_processed)
+    time.sleep(30)
+    continue
+  except Exception as e:
+    print("Unknown Error:",e)
+  except KeyboardInterrupt:
+    print("Exiting...")
+    running = False
+  finally:
+    saveProcessed(already_processed)
+    print("%s - Processed so far:\n%s" % (datetime.now(),already_processed))
+
+print("%s - Program Ended. Total Processed Comments (%d replied / %d read):\n%s" % (datetime.now(), count_actual, count, already_processed))
 
 # TODO: do something with data, reply to comments
 # TODO: handle print() unicode error at some point
