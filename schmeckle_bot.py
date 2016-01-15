@@ -228,9 +228,6 @@ while running:
 
 print("%s - Program Ended. Total Processed Comments (%d replied / %d read):\n%s" % (datetime.now(), count_actual, count, already_processed))
 
-# TODO: do something with data, reply to comments
 # TODO: handle print() unicode error at some point
 # TODO: track comments that have been replied to in a deque cache to avoid repeats
-# TODO: save comments replied to in txt file, load on start
 # TODO: Consider markdown tables
-
