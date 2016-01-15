@@ -160,7 +160,7 @@ def updateProcessed(comment_or_submission, response):
 
 def checkSubmissions(limit=submission_read_limit):
   """Check new submissions in subreddit and add comments if they warrant a response"""
-  submissions = subreddit.get_hot(limit=limit)
+  submissions = subreddit.get_new(limit=limit)
   internal_count = 0
 
   print("\n---\n%s - Checking latest submissions..." % (datetime.now()))
