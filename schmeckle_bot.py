@@ -91,14 +91,22 @@ def schmeckle2usd(schmeckle):
 def getConversion(body):
   """Calculate schmeckle to USD responses"""
   values = []
-  msg_template = u"* {:,.2f} Schmeckles → **${:,.2f} USD**\n"
+  msg_template_f = u"* {:,.2f} Schmeckles → **${:,.2f} USD**\n" # with decimals
+  msg_template_i = u"* {:,.0f} Schmeckles → **${:,.0f} USD**\n" # without decimals
   pairs = p.findall(body)
   if len(pairs) > 0:
     for match in pairs:
       # '<number> schmeckle' -> match, float(<number>)
       values.append(locale.atof(match.split()[0]))
-
-  response = [msg_template.format(schmeckle, schmeckle2usd(schmeckle)) for schmeckle in values]
+  
+  response = []
+  for schmeckle in values:
+    usd = schmeckle2usd(schmeckle)
+    if schmeckle.is_integer():
+      response.append(msg_template_f.format(schmeckle, usd)
+    else:
+      response.append(msg_template_i.format(schmeckle, usd)
+  
   return [response, values]
 
 
