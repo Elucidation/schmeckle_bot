@@ -3,6 +3,12 @@
 
 According to the creators, [1 Schmeckle is worth about $148 USD](https://www.reddit.com/r/IAmA/comments/202owt/we_are_dan_harmon_and_justin_roiland_creators_of/cfzfv79).
 
+## Feedback/Comments
+
+Several options from low priority to high:
+* Send a PM to SchmeckleBot with comments.
+* If there's an issue with a particular comment by SchmeckleBot, please either reply to that comment with the issue and downvote as needed, I'll be adding auto-deletion if a comment goes negative.
+* For software issues/suggestions/feature requests, create a new issue on this Github.
 
 
 ## Invoking SchmeckleBot
@@ -19,7 +25,7 @@ If a comment has both a `<number> schmeckle(s)` and one of the following: `how`,
 
 ---
 
-<sup>[1 Schmeckle = $148 USD](https://www.reddit.com/r/IAmA/comments/202owt/we_are_dan_harmon_and_justin_roiland_creators_of/cfzfv79) | price not guaranteed | [`what is my purpose`](https://github.com/Elucidation/schmeckle_bot 'convert Schmeckles to USD')
+<sup>[1 Schmeckle = $148 USD](https://www.reddit.com/r/IAmA/comments/202owt/we_are_dan_harmon_and_justin_roiland_creators_of/cfzfv79) | price not guaranteed | [`what is my purpose`](https://github.com/Elucidation/schmeckle_bot 'convert Schmeckles to USD')</sub>
 
 ===
 
