@@ -3,17 +3,9 @@
 
 According to the creators, [1 Schmeckle is worth about $148 USD](https://www.reddit.com/r/IAmA/comments/202owt/we_are_dan_harmon_and_justin_roiland_creators_of/cfzfv79).
 
-## Feedback/Comments
-
-Several options from low priority to high:
-* Send a PM to SchmeckleBot with comments.
-* If there's an issue with a particular comment by SchmeckleBot, please either reply to that comment with the issue and downvote as needed, I'll be adding auto-deletion if a comment goes negative.
-* For software issues/suggestions/feature requests, create a new issue on this Github.
-
-
 ## Invoking SchmeckleBot
 
-SchmeckleBot is usually running on a Raspberry Pi.  It listens to the [/r/rickandmorty](https://www.reddit.com/r/rickandmorty/) subreddit comment stream.
+SchmeckleBot is usually running on a Raspberry Pi.  It listens to the [/r/rickandmorty](https://www.reddit.com/r/rickandmorty/) subreddit comment stream. [**Here is one of it comments on Reddit**](https://www.reddit.com/r/rickandmorty/comments/40udy4/brace_yourselves/cyxpgnh?context=10000)
 
 If a comment has both a `<number> schmeckle(s)` and one of the following: `how`, `what`, `?`, `!`, then the bot will generate a reply message that looks like something like [this](https://www.reddit.com/r/rickandmorty/comments/40udy4/brace_yourselves/cyxpgnh?context=10000):
 
@@ -29,6 +21,13 @@ If a comment has both a `<number> schmeckle(s)` and one of the following: `how`,
 
 ===
 
+
+## Feedback/Comments
+
+Several options from low priority to high:
+* Send a PM to SchmeckleBot with comments.
+* If there's an issue with a particular comment by SchmeckleBot, please either reply to that comment with the issue and downvote as needed, I'll be adding auto-deletion if a comment goes negative.
+* For software issues/suggestions/feature requests, create a new issue on this Github.
 
 If you make a comment that satisfies those two requirements, and the bot is running, it will probably see and reply with the conversion within a couple minutes (10 minutes at worst).
 
