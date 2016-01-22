@@ -13,7 +13,7 @@ If a comment has both a `<number> schmeckle(s)` and one of the following: `how`,
 
 > I would pay **2,000 schmeckles** to not see any screenshots. I play the game. I don't need to see screenshots. 
 
-* 2,000.00 Schmeckles → **$296,000.00 USD**
+* 2,000 Schmeckles → **$296,000 USD**
 
 ---
 
