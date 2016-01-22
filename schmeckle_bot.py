@@ -11,6 +11,7 @@ from datetime import datetime
 from praw.helpers import comment_stream
 import requests
 import socket
+from math import isinf
 
 import auth_config
 
@@ -45,6 +46,9 @@ quote_remove = re.compile("^> .*\n", re.MULTILINE)
 # How long a quote in either direction can be before truncating
 max_sentence_buffer = 100
 
+# How many characters a number can have max
+max_number_length = 100
+
 # How many comments to read initially in stream
 comment_stream_limit = 100
 
@@ -63,18 +67,29 @@ def getQuote(body):
   if len(body) > max_sentence_buffer*2:
     for match in p.finditer(body):
       short_line = ""
-      a = max(0,match.start()-max_sentence_buffer)
+
+      # Handle case of match being larger than sentence buffer
+      safe_start = match.start()
+      if (match.end() - match.start() > max_number_length):
+        safe_start = match.end() - max_number_length
+
+      a = max(0,safe_start-max_sentence_buffer)
       b = min(len(body),match.end()+max_sentence_buffer)
+      print(a,b)
+
       short_line = body[a:b]
+
+      # Append quote initializer to each double newline (markdown newline)
+      short_line = '\n\n> '.join(short_line.split('\n\n'))
 
       if a == 0:
         s_a = ''
       else:
-        s_a = '...'
+        s_a = '... '
       if b == len(body):
         s_b = ''
       else:
-        s_b = '...'
+        s_b = ' ...'
 
       lines.append(s_a+short_line+s_b)
   else:
@@ -93,19 +108,29 @@ def getConversion(body):
   values = []
   msg_template_f = u"* {:,.2f} Schmeckles → **${:,.2f} USD**\n" # with decimals
   msg_template_i = u"* {:,.0f} Schmeckles → **${:,.0f} USD**\n" # without decimals
+  msg_inf = u"* There's a lot of numbers there, I think you could probably go to Wall Street.\n\n*You ever hear about Wall Street, Morty? Y-Y-Y'know what those guys do i-in-in their fancy boardrooms? They take their balls and they dip 'em in cocaine and wipe 'em all over each other—y'know.*\n"
   pairs = p.findall(body)
   if len(pairs) > 0:
     for match in pairs:
       # '<number> schmeckle' -> match, float(<number>)
-      values.append(locale.atof(match.split()[0]))
+      value_str = match.split()[0]
+
+      # Handle numbers with over 9000 characters. Yes, it's over 9000.
+      if (len(value_str)) > 9000:
+        values.append(locale.atof('inf'))
+      else:
+        values.append(locale.atof(value_str))
   
   response = []
   for schmeckle in values:
-    usd = schmeckle2usd(schmeckle)
-    if schmeckle.is_integer():
-      response.append(msg_template_i.format(schmeckle, usd))
+    if isinf(schmeckle):
+      response.append(msg_inf)
     else:
-      response.append(msg_template_f.format(schmeckle, usd))
+      usd = schmeckle2usd(schmeckle)
+      if schmeckle.is_integer():
+        response.append(msg_template_i.format(schmeckle, usd))
+      else:
+        response.append(msg_template_f.format(schmeckle, usd))
   
   return [response, values]
 
