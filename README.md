@@ -7,13 +7,13 @@ According to the creators, [1 Schmeckle is worth about $148 USD](https://www.red
 
 SchmeckleBot is usually running on a Raspberry Pi. [**Here is one of it comments on Reddit**](https://www.reddit.com/r/rickandmorty/comments/40udy4/brace_yourselves/cyxpgnh?context=10000)
 
-If a comment has both a `<number> schmeckle(s)` and one of the following: `how`, `what`, `?`, `!`, then the bot will generate a reply message that looks like something like [this](https://www.reddit.com/r/rickandmorty/comments/40udy4/brace_yourselves/cyxpgnh?context=10000):
+If a comment has both a `<number> schmeckle(s)` and one of the following: `how`, `what`, `?`, `!`, then the bot will generate a reply message that looks like something like [this](https://www.reddit.com/r/rickandmorty/comments/43eq1d/my_sister_made_a_rick_morty_sculpture_she_says/czhralv?context=3):
 
 ===
 
-> I would pay **2,000 schmeckles** to not see any screenshots. I play the game. I don't need to see screenshots. 
+> Hey there! I'm Mr.SculptureBuyer. I'll pay **50 schmeckles** for that sculpture!
 
-* 2,000 Schmeckles → **$296,000 USD**
+* 50 Schmeckles → **$7,400 USD**
 
 ---
 
