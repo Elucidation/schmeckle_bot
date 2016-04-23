@@ -75,7 +75,7 @@ def getQuote(body):
 
       a = max(0,safe_start-max_sentence_buffer)
       b = min(len(body),match.end()+max_sentence_buffer)
-      print(a,b)
+      # print(a,b)
 
       short_line = body[a:b]
 
@@ -225,6 +225,10 @@ def checkSubmissions(limit=submission_read_limit):
   # Number of comments sent
   return internal_count
 
+def checkSelfReply(body):
+  """Check if self catch-phrase in comment we're looking at, skip if so"""
+  return 'WHAT IS MY PURPOSE' in body
+
 #########################################################
 # Main Script
 # Track commend ids that have already been processed successfully
@@ -243,11 +247,11 @@ while running:
     print ("\n\t---\n\t%s - Generating fresh comment stream\n\t---\n\n" % datetime.now())
     comments = comment_stream(r, subreddit, limit=comment_stream_limit)
     for comment in comments:
-      if ((time.time() - last) > 120):
+      if ((time.time() - last) > 600):
         print("\n\t---\n\t%s - %d processed comments, %d read\n" % (datetime.now(), count_actual, count))
         # Read in submissions and process
         # Check submissions
-        print ("\n\t---\n\t%s - Processing hot submissions \n\t---\n\n" % datetime.now())
+        print ("\n\t---\n\t%s - Processing submissions \n\t---\n\n" % datetime.now())
         count_actual += checkSubmissions()
         print ("\n\t---\n")
 
@@ -261,12 +265,15 @@ while running:
       if comment.author.name == schmeckle_bot_name:
         print("%s - Skipping self comment: %s" % (datetime.now(), comment.id))
         continue
+      elif checkSelfReply(comment.body):
+        print("%s - Skipping secondhand self comment reply: %s" % (datetime.now(), comment.id))
+        continue
       elif comment.id in already_processed:
         print("%s - Skipping previously processed: %s" % (datetime.now(), comment.id))
         continue
       
       # If there is a schmeckle value in body
-      response = getResponse(comment.body)
+      response = getResponse(comment.body, skipPartial=False)
       if not response:
         # Not a schmeckle convertable comment, continue
         continue
@@ -278,7 +285,7 @@ while running:
         try:
           print("\n%s - Replying to %s..." % (datetime.now(), comment.id))
           comment.reply(msg)
-          already_processed.add(comment.id) # Remove from already_processed as we didn't get it
+          already_processed.add(comment.id) # Replied, so add to already_processed
           print("> %s - Successful reply to %s" % (datetime.now(), comment.id))
           updateProcessed(comment, response)
           break
@@ -297,7 +304,7 @@ while running:
       # Save after each comment
       saveProcessed(already_processed)
       # 5 minutes per comment max speed, add on time it takes to check submissions
-      sleep_time = 300
+      sleep_time = 10
       print("\t%s - %s seconds to go..." % (datetime.now(), sleep_time))
       while sleep_time > 60:
         time.sleep(60) # sleep in increments of 1 minute
@@ -311,7 +318,9 @@ while running:
     time.sleep(30)
     continue
   except Exception as e:
-    print("Unknown Error:",e)
+    already_processed.add(comment.id) # Unknown error, to avoid retries, add to processed and continue
+    print("Unknown Error (skipping):",e)
+    time.sleep(10)
   except KeyboardInterrupt:
     print("Exiting...")
     running = False
