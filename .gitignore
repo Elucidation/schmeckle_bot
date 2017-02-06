@@ -1,4 +1,5 @@
 # Do not track config file with username/password
+praw.ini
 auth_config.py
 
 # Don't track comments already processed file or replies
