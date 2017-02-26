@@ -14,10 +14,11 @@ RUN pip install --upgrade praw
 # Clean up APT when done.
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-COPY . /tmp/sb/
-# Once the docker instance is up, copy over your praw.ini file for credentials
-# into /tmp/sb
-# Then manually start the script from inside in headless mode using:
-# <machine>$ docker exec -it <container> /bin/bash
-# <docker>$ cd /tmp/sb
-# <docker>$ nohup python -u schmeckle_bot.py > out.log 2> out_error.log &
+
+# Copy code over
+COPY . /sb/
+
+WORKDIR /sb
+
+# Run schmecklebot by default
+CMD ["/sb/run_sb.sh"]
