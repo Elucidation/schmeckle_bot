@@ -23,7 +23,7 @@ def startStream(args):
   sb = reddit.user.me() # SchmeckleBot object
   subreddit = reddit.subreddit('rickandmorty')
 
-  # Start live stream on all submissions in the subreddit
+  # Start live stream on comment stream for the subreddit
   for comment in subreddit.stream.comments():
     # Check if comment already has a reply
     if not previouslyRepliedTo(comment, sb):
@@ -38,7 +38,7 @@ def startStream(args):
         # Generate response
         response = generateResponseMessage(search_result)
 
-        # Reply to submission with response
+        # Reply to comment with response
         if not args.dry:
           logMessage(comment,"[REPLIED]")
           comment.reply(response)
@@ -54,7 +54,7 @@ def startStream(args):
         time.sleep(1) # Wait a second between normal submissions
 
     else:
-      logMessage(submission,"[SKIP]") # Skip since replied to already
+      logMessage(comment,"[SKIP]") # Skip since replied to already
     
 
 def main(args):
