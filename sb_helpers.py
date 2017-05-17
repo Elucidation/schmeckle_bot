@@ -73,8 +73,15 @@ def searchForSchmeckles(body_text):
 
 # Check if comment has a comment by this bot already, or is a comment by bot
 def previouslyRepliedTo(comment, me):
+  # Check if comment author is self, skip if so
   if comment.author == me:
     return True
+  # Check if author of parent of comment is self
+  if comment.parent().author == me:
+    # Check if comment contains github self-link, skip if so as it's probably
+    # a quote
+    if 'github.com/Elucidation/schmeckle_bot' in comment.body:
+      return True
   comment.refresh() # So we can see replies
   for reply in comment.replies.list():
     if reply.author == me:
